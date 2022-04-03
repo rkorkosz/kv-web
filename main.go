@@ -2,22 +2,30 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"flag"
 
-	chi "github.com/go-chi/chi/v5"
 	"github.com/rkorkosz/web"
 )
 
 func main() {
 	dbPath := flag.String("dbPath", "kv.db", "database path")
+	email := flag.String("email", "", "acme email")
+	host := flag.String("host", "", "acme host")
+	cert := flag.String("cert", "cert.pem", "certificate path")
+	key := flag.String("key", "key.pem", "certificate key path")
+	addr := flag.String("bind", ":8000", "bind address")
 	flag.Parse()
-	kv := NewKV(*dbPath)
-	r := chi.NewRouter()
-	kv.Router(r)
+	var tlsConfig *tls.Config
+	if *email != "" && *host != "" {
+		tlsConfig = web.AutoCertWhitelist(*email, *host)
+	} else {
+		tlsConfig = web.LocalTLSConfig(*cert, *key)
+	}
 	srv := web.Server(
-		web.WithAddr(":8000"),
-		web.WithTLSConfig(web.LocalTLSConfig("cert.pem", "key.pem")),
-		web.WithHandler(r),
+		web.WithAddr(*addr),
+		web.WithTLSConfig(tlsConfig),
+		web.WithHandler(NewHandler(NewBoltKV(*dbPath))),
 	)
 	web.RunServer(context.Background(), srv)
 }
