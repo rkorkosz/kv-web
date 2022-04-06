@@ -2,10 +2,10 @@ package main
 
 import (
 	"context"
-	"crypto/tls"
 	"flag"
 
 	"github.com/rkorkosz/web"
+	"golang.org/x/crypto/acme/autocert"
 )
 
 func main() {
@@ -16,12 +16,7 @@ func main() {
 	key := flag.String("key", "key.pem", "certificate key path")
 	addr := flag.String("bind", ":8000", "bind address")
 	flag.Parse()
-	var tlsConfig *tls.Config
-	if *email != "" && *host != "" {
-		tlsConfig = web.AutoCertWhitelist(*email, *host)
-	} else {
-		tlsConfig = web.LocalTLSConfig(*cert, *key)
-	}
+	tlsConfig := web.LocalAndAutoCert(*cert, *key, *email, autocert.HostWhitelist(*host))
 	srv := web.Server(
 		web.WithAddr(*addr),
 		web.WithTLSConfig(tlsConfig),
